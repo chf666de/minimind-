@@ -13,7 +13,6 @@ from trainer.trainer_utils import setup_seed, get_model_params
 from openai import OpenAI
 from tqdm import tqdm
 
-# 初始化API客户端
 client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
@@ -123,19 +122,14 @@ def generate_answers(prompts, model, tokenizer, args):
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True) if args.show_speed else None
 
     for idx, prompt in enumerate(tqdm(prompts, desc="生成答案")):
-        # 设置随机种子 (仿照文档2)
+
         setup_seed(2026)  # 或使用随机种子 setup_seed(random.randint(0, 2048))
 
-        # 处理对话历史 (仿照文档2)
         conversation = conversation[-args.historys:] if args.historys else []
         conversation.append({"role": "user", "content": prompt})
-
-        # 构建模型输入模板 (仿照文档2)
         templates = {"conversation": conversation, "tokenize": False, "add_generation_prompt": True}
         if args.weight == 'reason':
-            templates["enable_thinking"] = True  # 仅Reason模型使用 (来自文档2)
-
-        # 应用模板 (仿照文档2)
+            templates["enable_thinking"] = True  
         try:
             model_inputs = tokenizer.apply_chat_template(**templates) if hasattr(tokenizer,
                                                                                  'apply_chat_template') else (
@@ -146,7 +140,6 @@ def generate_answers(prompts, model, tokenizer, args):
 
         inputs = tokenizer(model_inputs, return_tensors="pt", truncation=True).to(args.device)
 
-        # 生成回答 (仿照文档2，但可选择是否使用streamer)
         print(f'\n💬 问题 {idx + 1}: {prompt}') if not args.quiet else None
         print('🤖 回答: ', end='') if not args.quiet and streamer else None
 
@@ -166,11 +159,10 @@ def generate_answers(prompts, model, tokenizer, args):
             )
         gen_time = time.time() - st
 
-        # 解码回复 (仿照文档2)
         response = tokenizer.decode(generated_ids[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
         conversation.append({"role": "assistant", "content": response})
 
-        # 记录生成结果
+
         answer_record = {
             "question_id": idx + 1,
             "question": prompt,
@@ -179,18 +171,16 @@ def generate_answers(prompts, model, tokenizer, args):
         }
         all_generated_answers.append(answer_record)
 
-        # 显示速度 (仿照文档2)
         gen_tokens = len(generated_ids[0]) - len(inputs["input_ids"][0])
         if args.show_speed and not args.quiet:
             print(f'\n[速度]: {gen_tokens / gen_time:.2f} tokens/s\n') if gen_time > 0 else print('\n')
         elif not args.quiet:
-            print(f'{response}\n')  # 如果没有使用streamer，则在此处打印回答
-
+            print(f'{response}\n') 
     return all_generated_answers
 
 
 def plot_score_line_chart(scores, output_dir, timestamp):
-    """根据分数列表绘制折线图并保存。"""
+   
     if not scores:
         print("[警告] 没有有效的分数可绘制图表。")
         return
@@ -406,4 +396,5 @@ def main():
 
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
+
     main()
